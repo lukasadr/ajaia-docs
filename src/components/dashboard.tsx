@@ -22,6 +22,8 @@ export function Dashboard({ userName }: { userName: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -78,6 +80,24 @@ export function Dashboard({ userName }: { userName: string }) {
     }
   }
 
+  async function deleteDocument(document: DocumentItem) {
+    if (!window.confirm(`Delete “${document.title}”? This cannot be undone.`)) return;
+    setDeletingId(document.id);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/documents/${document.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(messageFrom(response, body));
+      }
+      setDocuments((items) => items.filter((item) => item.id !== document.id));
+    } catch (reason) {
+      setDeleteError(reason instanceof Error ? reason.message : "Unable to delete this document.");
+    } finally {
+      setDeletingId("");
+    }
+  }
+
   const visibleDocuments = documents.filter((document) => tab === "mine"
     ? document.access === "owner"
     : document.access !== "owner");
@@ -117,6 +137,7 @@ export function Dashboard({ userName }: { userName: string }) {
         </div>
       )}
       {importError && <p className="import-error" role="alert">{importError}</p>}
+      {deleteError && <p className="import-error" role="alert">{deleteError}</p>}
       {loading ? <div className="skeleton-grid" aria-label="Loading documents" aria-busy="true"><div className="skeleton-card" /><div className="skeleton-card" /></div> : visibleDocuments.length === 0 ? (
         <div className="empty-state">
           <span className="empty-mark">—</span>
@@ -126,15 +147,22 @@ export function Dashboard({ userName }: { userName: string }) {
       ) : (
         <div className="document-list">
           {visibleDocuments.map((document) => (
-            <Link className="document-row" href={`/documents/${document.id}`} key={document.id}>
-              <span className="document-icon" aria-hidden="true">▤</span>
-              <span className="document-main">
-                <strong>{document.title}</strong>
-                <span>{document.access === "owner" ? "Updated" : `Shared by ${document.sharedBy}`} · {new Date(document.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
-              </span>
-              <span className={`access-badge ${document.access}`}>{document.access[0].toUpperCase() + document.access.slice(1)}</span>
-              <span className="row-arrow" aria-hidden="true">↗</span>
-            </Link>
+            <article className="document-row" key={document.id}>
+              <Link className="document-card-link" href={`/documents/${document.id}`}>
+                <span className="document-icon" aria-hidden="true">▤</span>
+                <span className="document-main">
+                  <strong>{document.title}</strong>
+                  <span>{document.access === "owner" ? "Updated" : `Shared by ${document.sharedBy}`} · {new Date(document.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                </span>
+                <span className={`access-badge ${document.access}`}>{document.access[0].toUpperCase() + document.access.slice(1)}</span>
+                <span className="row-arrow" aria-hidden="true">↗</span>
+              </Link>
+              {document.access === "owner" && (
+                <button className="delete-document-button" type="button" aria-label={`Delete ${document.title}`} disabled={deletingId === document.id} onClick={() => void deleteDocument(document)}>
+                  {deletingId === document.id ? "Deleting..." : "Delete"}
+                </button>
+              )}
+            </article>
           ))}
         </div>
       )}
