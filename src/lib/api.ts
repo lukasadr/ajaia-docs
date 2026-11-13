@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getSessionUser } from "@/lib/session";
 
 export const MAX_CONTENT_BYTES = 1024 * 1024;
 
 export function apiError(status: number, code: string, message: string) {
   return NextResponse.json({ error: { code, message } }, { status });
+}
+
+export async function sessionState() {
+  try {
+    return { user: await getSessionUser(), response: null } as const;
+  } catch {
+    return { user: null, response: apiError(500, "INTERNAL_ERROR", "Unable to verify your session.") } as const;
+  }
 }
 
 export async function parseJson<T extends z.ZodType>(request: Request, schema: T) {

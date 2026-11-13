@@ -11,6 +11,7 @@ export default async function LoginPage() {
       <span className="eyebrow">Ajaia Documents</span>
       <h1>Choose a demo account.</h1>
       <p>Select a seeded user to start a signed demo session.</p>
+      <p className="demo-auth-note">Demo auth, not for production.</p>
       <div className="user-list">
         {users.map((user) => (
           <form className="user-row" action="/api/auth/login" method="post" key={user.id}>

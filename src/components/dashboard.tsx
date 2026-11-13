@@ -97,7 +97,7 @@ export function Dashboard({ userName }: { userName: string }) {
           <h1>Documents</h1>
         </div>
         <div className="dashboard-actions">
-          <input ref={fileInput} className="visually-hidden" type="file" accept=".txt,.md,.docx" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
+          <input ref={fileInput} className="visually-hidden" type="file" accept=".txt,.md,.docx" aria-label="Choose a .txt, .md, or .docx file" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
           <button className="secondary-button" onClick={() => fileInput.current?.click()} disabled={importing}>
             {importing ? "Importing..." : "Import"}
           </button>
@@ -117,7 +117,7 @@ export function Dashboard({ userName }: { userName: string }) {
         </div>
       )}
       {importError && <p className="import-error" role="alert">{importError}</p>}
-      {loading ? <p className="loading-state">Loading documents...</p> : visibleDocuments.length === 0 ? (
+      {loading ? <div className="skeleton-grid" aria-label="Loading documents" aria-busy="true"><div className="skeleton-card" /><div className="skeleton-card" /></div> : visibleDocuments.length === 0 ? (
         <div className="empty-state">
           <span className="empty-mark">—</span>
           <h2>{tab === "mine" ? "No documents yet" : "Nothing shared with you"}</h2>

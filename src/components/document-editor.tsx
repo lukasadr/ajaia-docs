@@ -65,6 +65,16 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   }, [editable, editor]);
 
   useEffect(() => {
+    if (!pendingContent && (!document || title === document.title)) return;
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [document, pendingContent, title]);
+
+  useEffect(() => {
     if (!pendingContent || !document || !editable) return;
     const snapshot = pendingContent;
     const timeout = window.setTimeout(async () => {
@@ -110,10 +120,10 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   if (loadError) return (
     <main className="editor-message"><p role="alert">{loadError}</p><button className="primary-button" onClick={() => void loadDocument()}>Retry</button><Link href="/">Back to documents</Link></main>
   );
-  if (!document || !editor) return <main className="editor-message">Loading document...</main>;
+  if (!document || !editor) return <main className="editor-shell" aria-label="Loading document" aria-busy="true"><div className="skeleton-editor-title" /><div className="skeleton-toolbar" /><div className="skeleton-paper" /></main>;
 
   const toolbarButton = (label: string, active: boolean, action: () => void, key?: string | number) => (
-    <button key={key} className={active ? "tool-button active" : "tool-button"} type="button" aria-label={label} aria-pressed={active} disabled={!editable} onClick={action}>{label}</button>
+    <button key={key} className={active ? "tool-button active" : "tool-button"} type="button" aria-label={{ B: "Bold", I: "Italic", U: "Underline", "¶": "Paragraph", "• List": "Bullet list", "1. List": "Numbered list" }[label] ?? label} aria-pressed={active} disabled={!editable} onClick={action}>{label}</button>
   );
 
   return (
@@ -123,7 +133,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
         <div className="editor-topbar-actions">
           {document.access === "owner" && <button className="share-button" type="button" onClick={() => setShareOpen(true)}>Share</button>}
           <div className="save-indicator" aria-live="polite">
-            {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Error saving</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
+            {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Not saved</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
           </div>
         </div>
       </header>

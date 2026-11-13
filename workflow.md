@@ -83,3 +83,6 @@ Tests (Vitest) for convert.ts:
 5. a small .docx fixture converts to non-empty content
 Add small fixtures (sample.txt, sample.md, sample.docx) in a /samples folder I can mention in the README.
 Give me full file paths, only the changed code, and the commands to run.
+
+
+

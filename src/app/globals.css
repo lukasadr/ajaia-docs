@@ -10,6 +10,11 @@ body {
   font-family: Georgia, "Times New Roman", serif;
 }
 
+:focus-visible {
+  outline: 3px solid #b8613e;
+  outline-offset: 3px;
+}
+
 main {
   width: min(100% - 32px, 560px);
   margin: 12vh auto 0;
@@ -82,6 +87,41 @@ button:hover {
   margin-top: 28px;
   padding-top: 16px;
   border-top: 1px solid #cbd2c8;
+}
+
+.demo-auth-note {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 7px 9px;
+  border-left: 2px solid #b8613e;
+  background: #e9eee6;
+  color: #45554a;
+  font-size: 0.8rem;
+}
+
+.skeleton-bar,
+.skeleton-heading,
+.skeleton-tabs,
+.skeleton-card,
+.skeleton-editor-title,
+.skeleton-toolbar,
+.skeleton-paper {
+  background: linear-gradient(90deg, #e6e9e2 25%, #f0f2ed 50%, #e6e9e2 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.4s ease-in-out infinite;
+}
+
+.skeleton-bar { height: 48px; margin: 14px 0 42px; }
+.skeleton-heading { width: 240px; height: 52px; margin-bottom: 32px; }
+.skeleton-tabs { width: 280px; height: 42px; margin-bottom: 20px; }
+.skeleton-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.skeleton-card { height: 112px; border: 1px solid #cbd2c8; }
+.skeleton-editor-title { width: min(520px, 80%); height: 52px; margin: 54px 0 24px; }
+.skeleton-toolbar { height: 54px; margin-bottom: 28px; }
+.skeleton-paper { width: min(100%, 760px); height: 55vh; margin: 0 auto; }
+
+@keyframes skeleton-wave {
+  to { background-position: -200% 0; }
 }
 
 .dashboard-shell,
@@ -676,6 +716,10 @@ button:hover {
   }
 
   .document-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skeleton-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
