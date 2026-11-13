@@ -9,6 +9,7 @@ type DocumentItem = {
   title: string;
   updatedAt: string;
   access: Access;
+  sharedBy?: string;
 };
 
 function messageFrom(response: Response, body: { error?: { message?: string } }) {
@@ -99,7 +100,7 @@ export function Dashboard({ userName }: { userName: string }) {
               <span className="document-icon" aria-hidden="true">▤</span>
               <span className="document-main">
                 <strong>{document.title}</strong>
-                <span>Updated {new Date(document.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                <span>{document.access === "owner" ? "Updated" : `Shared by ${document.sharedBy}`} · {new Date(document.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
               </span>
               <span className={`access-badge ${document.access}`}>{document.access[0].toUpperCase() + document.access.slice(1)}</span>
               <span className="row-arrow" aria-hidden="true">↗</span>

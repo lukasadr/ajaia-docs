@@ -13,13 +13,13 @@ export async function GET() {
 
   const documents = await prisma.document.findMany({
     where: { OR: [{ ownerId: user.id }, { shares: { some: { userId: user.id } } }] },
-    include: { shares: { select: { userId: true, role: true } } },
+    include: { shares: { select: { userId: true, role: true } }, owner: { select: { name: true } } },
     orderBy: { updatedAt: "desc" },
   });
   const accessible = documents.flatMap((document) => {
     const access = getAccess(user, document);
-    const { shares: _shares, ...data } = document;
-    return access === "none" ? [] : [{ ...data, access }];
+    const { shares: _shares, owner, ...data } = document;
+    return access === "none" ? [] : [{ ...data, access, ...(access !== "owner" ? { sharedBy: owner.name } : {}) }];
   });
 
   return NextResponse.json(accessible);

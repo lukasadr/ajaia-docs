@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import { ShareDialog } from "@/components/share-dialog";
 
 type Access = "owner" | "editor" | "viewer";
 type DocumentData = { id: string; title: string; content: object; access: Access };
@@ -23,6 +24,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   const [retryCount, setRetryCount] = useState(0);
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
   const latestContent = useRef<object | null>(null);
   const editable = document?.access !== "viewer";
 
@@ -119,8 +121,11 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     <main className="editor-shell">
       <header className="editor-topbar">
         <Link className="back-link" href="/" aria-label="Back to documents">← <span>Documents</span></Link>
-        <div className="save-indicator" aria-live="polite">
-          {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Error saving</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
+        <div className="editor-topbar-actions">
+          {document.access === "owner" && <button className="share-button" type="button" onClick={() => setShareOpen(true)}>Share</button>}
+          <div className="save-indicator" aria-live="polite">
+            {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Error saving</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
+          </div>
         </div>
       </header>
       <section className="editor-heading">
@@ -140,9 +145,10 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
         {toolbarButton("1. List", editor.isActive("orderedList"), () => editor.chain().focus().toggleOrderedList().run())}
       </div>
       <section className="paper" aria-label="Document content">
-        {!editable && <p className="readonly-note">Read-only access</p>}
+        {!editable && <p className="readonly-note">View only</p>}
         <EditorContent editor={editor} />
       </section>
+      {shareOpen && <ShareDialog documentId={document.id} onClose={() => setShareOpen(false)} />}
     </main>
   );
 }
