@@ -24,9 +24,17 @@ export function Dashboard({ userName }: { userName: string }) {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = deleteDialog.current;
+    if (deleteTarget && dialog && !dialog.open) dialog.showModal();
+    if (!deleteTarget && dialog?.open) dialog.close();
+  }, [deleteTarget]);
 
   async function loadDocuments() {
     setLoading(true);
@@ -81,7 +89,6 @@ export function Dashboard({ userName }: { userName: string }) {
   }
 
   async function deleteDocument(document: DocumentItem) {
-    if (!window.confirm(`Delete “${document.title}”? This cannot be undone.`)) return;
     setDeletingId(document.id);
     setDeleteError("");
     try {
@@ -91,6 +98,7 @@ export function Dashboard({ userName }: { userName: string }) {
         throw new Error(messageFrom(response, body));
       }
       setDocuments((items) => items.filter((item) => item.id !== document.id));
+      setDeleteTarget(null);
     } catch (reason) {
       setDeleteError(reason instanceof Error ? reason.message : "Unable to delete this document.");
     } finally {
@@ -137,7 +145,6 @@ export function Dashboard({ userName }: { userName: string }) {
         </div>
       )}
       {importError && <p className="import-error" role="alert">{importError}</p>}
-      {deleteError && <p className="import-error" role="alert">{deleteError}</p>}
       {loading ? <div className="skeleton-grid" aria-label="Loading documents" aria-busy="true"><div className="skeleton-card" /><div className="skeleton-card" /></div> : visibleDocuments.length === 0 ? (
         <div className="empty-state">
           <span className="empty-mark">—</span>
@@ -158,14 +165,37 @@ export function Dashboard({ userName }: { userName: string }) {
                 <span className="row-arrow" aria-hidden="true">↗</span>
               </Link>
               {document.access === "owner" && (
-                <button className="delete-document-button" type="button" aria-label={`Delete ${document.title}`} disabled={deletingId === document.id} onClick={() => void deleteDocument(document)}>
-                  {deletingId === document.id ? "Deleting..." : "Delete"}
+                <button className="delete-document-button" type="button" aria-label={`Delete ${document.title}`} disabled={Boolean(deletingId)} onClick={() => { setDeleteError(""); setDeleteTarget(document); }}>
+                  Delete
                 </button>
               )}
             </article>
           ))}
         </div>
       )}
+      <dialog
+        ref={deleteDialog}
+        className="delete-dialog"
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        onCancel={(event) => { event.preventDefault(); if (!deletingId) setDeleteTarget(null); }}
+        onClick={(event) => { if (event.target === event.currentTarget && !deletingId) setDeleteTarget(null); }}
+      >
+        {deleteTarget && (
+          <>
+            <span className="eyebrow">Delete document</span>
+            <h2 id="delete-dialog-title">Delete “{deleteTarget.title}”?</h2>
+            <p id="delete-dialog-description">This permanently deletes the document and removes collaborator access. This action cannot be undone.</p>
+            {deleteError && <p className="delete-dialog-error" role="alert">{deleteError}</p>}
+            <div className="delete-dialog-actions">
+              <button className="dialog-cancel-button" type="button" disabled={Boolean(deletingId)} autoFocus onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="dialog-delete-button" type="button" disabled={Boolean(deletingId)} onClick={() => void deleteDocument(deleteTarget)}>
+                {deletingId ? "Deleting..." : "Delete document"}
+              </button>
+            </div>
+          </>
+        )}
+      </dialog>
     </main>
   );
 }

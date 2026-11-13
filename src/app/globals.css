@@ -307,6 +307,68 @@ button:hover {
   color: #842e20;
 }
 
+.delete-dialog {
+  width: min(calc(100% - 32px), 440px);
+  margin: auto;
+  padding: 28px;
+  border: 1px solid #cbd2c8;
+  background: #fbfcf8;
+  color: #17211d;
+  box-shadow: 0 16px 48px #10191430;
+}
+
+.delete-dialog::backdrop {
+  background: #10191480;
+}
+
+.delete-dialog h2 {
+  margin: 8px 0;
+  font: 500 1.65rem Georgia, "Times New Roman", serif;
+}
+
+.delete-dialog > p {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
+.delete-dialog-error {
+  color: #a13e2b;
+}
+
+.delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dialog-cancel-button,
+.dialog-delete-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 2px;
+}
+
+.dialog-cancel-button {
+  border: 1px solid #cbd2c8;
+  background: transparent;
+  color: #315746;
+}
+
+.dialog-cancel-button:hover:not(:disabled) {
+  background: #e7ebe3;
+  color: #244333;
+}
+
+.dialog-delete-button {
+  background: #963e2b;
+  color: white;
+}
+
+.dialog-delete-button:hover:not(:disabled) {
+  background: #842e20;
+}
+
 .document-icon {
   display: grid;
   width: 36px;
