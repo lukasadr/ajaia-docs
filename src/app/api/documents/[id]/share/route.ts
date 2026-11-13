@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { apiError, parseJson } from "@/lib/api";
+import { apiError, parseJson, sessionState } from "@/lib/api";
 import { getAccess } from "@/lib/access";
-import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { listShares, shareDocument, ShareServiceError, shareRoleSchema, unshareDocument } from "@/lib/sharing";
 
@@ -12,10 +11,15 @@ const shareSchema = z.object({ email: z.string().trim().email(), role: shareRole
 const unshareSchema = z.object({ userId: z.string().min(1) });
 
 async function authorizeOwner(id: string, userId: string) {
-  const document = await prisma.document.findUnique({
-    where: { id },
-    include: { shares: { select: { userId: true, role: true } } },
-  });
+  let document;
+  try {
+    document = await prisma.document.findUnique({
+      where: { id },
+      include: { shares: { select: { userId: true, role: true } } },
+    });
+  } catch {
+    return { response: apiError(500, "INTERNAL_ERROR", "Unable to check document access.") };
+  }
   if (!document) return { response: apiError(404, "NOT_FOUND", "Document not found.") };
   const access = getAccess({ id: userId }, document);
   if (access === "none") return { response: apiError(404, "NOT_FOUND", "Document not found.") };
@@ -24,13 +28,14 @@ async function authorizeOwner(id: string, userId: string) {
 }
 
 function serviceError(error: unknown) {
-  if (!(error instanceof ShareServiceError)) throw error;
+  if (!(error instanceof ShareServiceError)) return apiError(500, "INTERNAL_ERROR", "Unable to update document sharing.");
   const status = error.code === "NOT_FOUND" ? 404 : error.code === "FORBIDDEN" ? 403 : 400;
   return apiError(status, error.code, error.message);
 }
 
 export async function GET(_request: Request, { params }: RouteContext) {
-  const user = await getSessionUser();
+  const { user, response } = await sessionState();
+  if (response) return response;
   if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
   const parsedId = idSchema.safeParse(id);
@@ -46,7 +51,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
-  const user = await getSessionUser();
+  const { user, response } = await sessionState();
+  if (response) return response;
   if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
   const parsedId = idSchema.safeParse(id);
@@ -64,7 +70,8 @@ export async function POST(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {
-  const user = await getSessionUser();
+  const { user, response } = await sessionState();
+  if (response) return response;
   if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
   const parsedId = idSchema.safeParse(id);

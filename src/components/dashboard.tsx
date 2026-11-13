@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Access = "owner" | "editor" | "viewer";
 type DocumentItem = {
@@ -22,6 +22,9 @@ export function Dashboard({ userName }: { userName: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
 
   async function loadDocuments() {
     setLoading(true);
@@ -56,6 +59,25 @@ export function Dashboard({ userName }: { userName: string }) {
     }
   }
 
+  async function importFile(file?: File) {
+    if (!file) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      const response = await fetch("/api/documents/import", { method: "POST", body: formData });
+      const body = await response.json();
+      if (!response.ok) throw new Error(messageFrom(response, body));
+      window.location.assign(`/documents/${body.id}`);
+    } catch (reason) {
+      setImportError(reason instanceof Error ? reason.message : "Unable to import this file.");
+    } finally {
+      setImporting(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
   const visibleDocuments = documents.filter((document) => tab === "mine"
     ? document.access === "owner"
     : document.access !== "owner");
@@ -74,10 +96,17 @@ export function Dashboard({ userName }: { userName: string }) {
           <span className="eyebrow">Your workspace</span>
           <h1>Documents</h1>
         </div>
-        <button className="primary-button" onClick={createDocument} disabled={creating}>
-          {creating ? "Creating..." : "+ New document"}
-        </button>
+        <div className="dashboard-actions">
+          <input ref={fileInput} className="visually-hidden" type="file" accept=".txt,.md,.docx" aria-label="Choose a .txt, .md, or .docx file" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
+          <button className="secondary-button" onClick={() => fileInput.current?.click()} disabled={importing}>
+            {importing ? "Importing..." : "Import"}
+          </button>
+          <button className="primary-button" onClick={createDocument} disabled={creating}>
+            {creating ? "Creating..." : "+ New document"}
+          </button>
+        </div>
       </section>
+      <p className="import-help">Supported: .txt, .md, .docx (max 2 MB). Images and complex Word layouts are not imported.</p>
       <nav className="tabs" aria-label="Document views">
         <button className={tab === "mine" ? "tab active" : "tab"} onClick={() => setTab("mine")} aria-pressed={tab === "mine"}>My documents</button>
         <button className={tab === "shared" ? "tab active" : "tab"} onClick={() => setTab("shared")} aria-pressed={tab === "shared"}>Shared with me</button>
@@ -87,7 +116,8 @@ export function Dashboard({ userName }: { userName: string }) {
           <span>{error}</span><button className="text-button" onClick={() => void loadDocuments()}>Retry</button>
         </div>
       )}
-      {loading ? <p className="loading-state">Loading documents...</p> : visibleDocuments.length === 0 ? (
+      {importError && <p className="import-error" role="alert">{importError}</p>}
+      {loading ? <div className="skeleton-grid" aria-label="Loading documents" aria-busy="true"><div className="skeleton-card" /><div className="skeleton-card" /></div> : visibleDocuments.length === 0 ? (
         <div className="empty-state">
           <span className="empty-mark">—</span>
           <h2>{tab === "mine" ? "No documents yet" : "Nothing shared with you"}</h2>

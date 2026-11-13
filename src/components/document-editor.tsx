@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import { ShareDialog } from "@/components/share-dialog";
+import { EDITOR_EXTENSIONS } from "@/lib/editor-extensions";
 
 type Access = "owner" | "editor" | "viewer";
 type DocumentData = { id: string; title: string; content: object; access: Access };
@@ -29,7 +28,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   const editable = document?.access !== "viewer";
 
   const editor = useEditor({
-    extensions: [StarterKit.configure({ underline: false }), Underline],
+    extensions: EDITOR_EXTENSIONS,
     content: EMPTY_DOC,
     immediatelyRender: false,
     editable,
@@ -64,6 +63,16 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editable, editor]);
+
+  useEffect(() => {
+    if (!pendingContent && (!document || title === document.title)) return;
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [document, pendingContent, title]);
 
   useEffect(() => {
     if (!pendingContent || !document || !editable) return;
@@ -111,10 +120,10 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   if (loadError) return (
     <main className="editor-message"><p role="alert">{loadError}</p><button className="primary-button" onClick={() => void loadDocument()}>Retry</button><Link href="/">Back to documents</Link></main>
   );
-  if (!document || !editor) return <main className="editor-message">Loading document...</main>;
+  if (!document || !editor) return <main className="editor-shell" aria-label="Loading document" aria-busy="true"><div className="skeleton-editor-title" /><div className="skeleton-toolbar" /><div className="skeleton-paper" /></main>;
 
   const toolbarButton = (label: string, active: boolean, action: () => void, key?: string | number) => (
-    <button key={key} className={active ? "tool-button active" : "tool-button"} type="button" aria-label={label} aria-pressed={active} disabled={!editable} onClick={action}>{label}</button>
+    <button key={key} className={active ? "tool-button active" : "tool-button"} type="button" aria-label={{ B: "Bold", I: "Italic", U: "Underline", "¶": "Paragraph", "• List": "Bullet list", "1. List": "Numbered list" }[label] ?? label} aria-pressed={active} disabled={!editable} onClick={action}>{label}</button>
   );
 
   return (
@@ -124,7 +133,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
         <div className="editor-topbar-actions">
           {document.access === "owner" && <button className="share-button" type="button" onClick={() => setShareOpen(true)}>Share</button>}
           <div className="save-indicator" aria-live="polite">
-            {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Error saving</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
+            {saveState === "saving" ? "Saving..." : saveState === "error" ? <><span>Not saved</span><button className="text-button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></> : "Saved"}
           </div>
         </div>
       </header>
