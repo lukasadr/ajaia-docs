@@ -1,18 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { apiError } from "@/lib/api";
 import { getAccess } from "@/lib/access";
 import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
-const createDocumentSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  content: z.json().default({}),
-});
+const emptyDocument = { type: "doc", content: [{ type: "paragraph" }] };
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
 
   const documents = await prisma.document.findMany({
     where: { OR: [{ ownerId: user.id }, { shares: { some: { userId: user.id } } }] },
@@ -21,35 +18,28 @@ export async function GET() {
   });
   const accessible = documents.flatMap((document) => {
     const access = getAccess(user, document);
-    return access === "none" ? [] : [{ ...document, access }];
+    const { shares: _shares, ...data } = document;
+    return access === "none" ? [] : [{ ...data, access }];
   });
 
   return NextResponse.json(accessible);
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-  const parsed = createDocumentSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
 
   const document = await prisma.document.create({
     data: {
       ownerId: user.id,
-      title: parsed.data.title,
-      content: parsed.data.content === null ? Prisma.JsonNull : parsed.data.content as Prisma.InputJsonValue,
+      title: "Untitled document",
+      content: emptyDocument as Prisma.InputJsonValue,
     },
     include: { shares: { select: { userId: true, role: true } } },
   });
   const access = getAccess(user, document);
-  if (access !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (access !== "owner") return apiError(403, "FORBIDDEN", "You cannot access this document.");
 
-  return NextResponse.json({ ...document, access }, { status: 201 });
+  const { shares: _shares, ...data } = document;
+  return NextResponse.json({ ...data, access }, { status: 201 });
 }

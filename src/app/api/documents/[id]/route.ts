@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { apiError, parseJson } from "@/lib/api";
 import { getAccess } from "@/lib/access";
 import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ const updateDocumentSchema = z.object({
 }).refine((value) => value.title !== undefined || value.content !== undefined, {
   message: "Provide a title or content to update.",
 });
+const idSchema = z.string().cuid();
 
 async function findDocument(id: string) {
   return prisma.document.findUnique({
@@ -23,34 +25,34 @@ async function findDocument(id: string) {
 
 export async function GET(_request: Request, { params }: RouteContext) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
-  const document = await findDocument(id);
-  if (!document) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return apiError(404, "NOT_FOUND", "Document not found.");
+  const document = await findDocument(parsedId.data);
+  if (!document) return apiError(404, "NOT_FOUND", "Document not found.");
 
   const access = getAccess(user, document);
-  if (access === "none") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ ...document, access });
+  if (access === "none") return apiError(404, "NOT_FOUND", "Document not found.");
+  const { shares: _shares, ...data } = document;
+  return NextResponse.json({ ...data, access });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
-  const document = await findDocument(id);
-  if (!document) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return apiError(404, "NOT_FOUND", "Document not found.");
+  const document = await findDocument(parsedId.data);
+  if (!document) return apiError(404, "NOT_FOUND", "Document not found.");
 
   const access = getAccess(user, document);
-  if (access !== "owner" && access !== "editor") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (access === "none") return apiError(404, "NOT_FOUND", "Document not found.");
+  if (access === "viewer") return apiError(403, "FORBIDDEN", "Viewers cannot edit this document.");
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-  const parsed = updateDocumentSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  const parsed = await parseJson(request, updateDocumentSchema);
+  if (!parsed.success) return parsed.response;
 
   const updated = await prisma.document.update({
     where: { id },
@@ -62,18 +64,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     },
     include: { shares: { select: { userId: true, role: true } } },
   });
-  return NextResponse.json({ ...updated, access: getAccess(user, updated) });
+  const { shares: _shares, ...data } = updated;
+  return NextResponse.json({ ...data, access: getAccess(user, updated) });
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiError(401, "UNAUTHORIZED", "Sign in to continue.");
   const { id } = await params;
-  const document = await findDocument(id);
-  if (!document) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return apiError(404, "NOT_FOUND", "Document not found.");
+  const document = await findDocument(parsedId.data);
+  if (!document) return apiError(404, "NOT_FOUND", "Document not found.");
 
   const access = getAccess(user, document);
-  if (access !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (access === "none") return apiError(404, "NOT_FOUND", "Document not found.");
+  if (access !== "owner") return apiError(403, "FORBIDDEN", "Only the owner can delete this document.");
   await prisma.document.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }
