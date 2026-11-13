@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import { ShareDialog } from "@/components/share-dialog";
+import { EDITOR_EXTENSIONS } from "@/lib/editor-extensions";
 
 type Access = "owner" | "editor" | "viewer";
 type DocumentData = { id: string; title: string; content: object; access: Access };
@@ -29,7 +28,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   const editable = document?.access !== "viewer";
 
   const editor = useEditor({
-    extensions: [StarterKit.configure({ underline: false }), Underline],
+    extensions: EDITOR_EXTENSIONS,
     content: EMPTY_DOC,
     immediatelyRender: false,
     editable,

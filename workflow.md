@@ -54,3 +54,32 @@ Tests (Vitest):
 1. getAccess: owner, editor, viewer, and none
 2. Sharing flow: user B gets none before sharing; viewer can read but a PATCH is rejected; editor can PATCH; after unshare, access is none again; a non-owner can't share; sharing with the owner or an unknown email fails
 Use a test database or mock Prisma, whichever is faster, and tell me which you chose and why. Give me full file paths, only the changed code, and the commands to run.
+
+
+Next phase: file import. Keep diffs small and explain choices briefly.
+
+Feature: a user uploads a .txt, .md, or .docx file and gets a NEW editable document owned by them, with the filename (without extension) as the title.
+
+Backend:
+- POST /api/documents/import (multipart/form-data, field "file"), with `export const runtime = 'nodejs'`
+- Validation (zod and manual checks): allowed extensions .txt/.md/.docx only; max 2 MB; reject empty files; for .docx also check the ZIP signature (starts with "PK"); return { error: { code, message } } with clear messages (400 for invalid type or empty, 413 for too large)
+- Put the conversion logic in a pure, testable module `lib/import/convert.ts`:
+  - .txt -> paragraphs split on blank lines (escape HTML, preserve line breaks within a paragraph)
+  - .md -> markdown-it to HTML
+  - .docx -> mammoth.convertToHtml (buffer input)
+  - then HTML -> Tiptap JSON via generateJSON using the SAME extension list as the editor (extract that list into a shared file), so unsupported or unsafe markup is dropped by the schema
+- Create the Document through the existing service, owned by the current user. Return the new document id.
+
+UI:
+- "Import" button on the dashboard (file picker; drag and drop is optional)
+- Helper text: "Supported: .txt, .md, .docx (max 2 MB). Images and complex Word layouts are not imported."
+- Loading state, inline error messages, and redirect to the new document on success
+
+Tests (Vitest) for convert.ts:
+1. .txt with two paragraphs produces two paragraph nodes
+2. .md with a heading, bold, and a bullet list produces heading, bold mark, and bulletList nodes
+3. an unsupported extension is rejected
+4. an oversized file is rejected
+5. a small .docx fixture converts to non-empty content
+Add small fixtures (sample.txt, sample.md, sample.docx) in a /samples folder I can mention in the README.
+Give me full file paths, only the changed code, and the commands to run.

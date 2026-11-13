@@ -153,6 +153,47 @@ button:hover {
   padding: 0 18px;
 }
 
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #315746;
+  border-radius: 2px;
+  background: transparent;
+  color: #315746;
+}
+
+.secondary-button:hover {
+  background: #e7ebe3;
+  color: #244333;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.import-help {
+  margin: -20px 0 26px;
+  font-size: 0.8rem;
+}
+
+.import-error {
+  margin: 14px 0;
+  color: #a13e2b;
+  font: 0.88rem Arial, sans-serif;
+}
+
 .tabs {
   display: flex;
   gap: 28px;
@@ -615,6 +656,18 @@ button:hover {
     align-items: start;
     flex-direction: column;
     margin: 42px 0 26px;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+  }
+
+  .dashboard-actions button {
+    flex: 1;
+  }
+
+  .import-help {
+    margin-top: -14px;
   }
 
   .document-row {
